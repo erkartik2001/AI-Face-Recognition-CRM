@@ -1,8 +1,10 @@
 import pickle
 import numpy as np
 import faiss
+import os
 
 from backend.services.face_engine import FaceEngine
+from backend.services.storage_service import B2Storage
 
 
 class FaceMatcher:
@@ -17,6 +19,10 @@ class FaceMatcher:
 
         # Load face engine
         self.engine = FaceEngine()
+
+        # b2
+        self.storage = B2Storage()
+
 
         # Load FAISS index
         self.index = faiss.read_index(faiss_index_path)
@@ -61,10 +67,69 @@ class FaceMatcher:
 
             matched_data = self.image_mapping[idx]
 
+            # results.append({
+            #     "person": matched_data["person"],
+            #     "image_path": matched_data["image_path"],
+            #     "similarity": float(similarity)
+            # })
+
+            file_name = matched_data["file_name"]
+
+            file_url = self.storage.generate_file_url(file_name)
+
             results.append({
-                "person": matched_data["person"],
-                "image_path": matched_data["image_path"],
-                "similarity": float(similarity)
+                "file_name":file_name,
+                "file_url" : file_url,
+                "similarity":float(similarity)
             })
 
         return results
+    
+
+    def add_face(
+        self,
+        embedding,
+        file_name,
+        file_url
+    ):
+
+        # Convert embedding
+        embedding = np.array(
+            [embedding]
+        ).astype("float32")
+
+
+        # Add to FAISS
+        self.index.add(embedding)
+
+
+        # New vector ID
+        new_id = len(self.image_mapping)
+
+
+        # Update mapping
+        self.image_mapping[new_id] = {
+            "file_name": file_name,
+            "file_url": file_url
+        }
+
+
+        # Save updated FAISS index
+        faiss.write_index(
+            self.index,
+            "faiss_index/face_engine.bin"
+        )
+
+
+        # Save updated mappings
+        with open(
+            "faiss_index/image_mapping.pkl",
+            "wb"
+        ) as f:
+
+            pickle.dump(
+                self.image_mapping,
+                f
+            )
+
+        return True
