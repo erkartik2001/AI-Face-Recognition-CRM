@@ -5,3 +5,10 @@ opencv-python
 numpy
 pillow
 tqdm
+pickle-mixin
+fastapi
+uvicorn
+python-multipart
+b2sdk
+python-dotenv
+requests
