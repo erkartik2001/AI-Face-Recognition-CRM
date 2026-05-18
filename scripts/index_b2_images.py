@@ -9,6 +9,9 @@ from backend.services.storage_service import B2Storage
 from backend.services.face_engine import FaceEngine
 
 
+MAX_IMAGES = 50
+
+
 # -----------------------------
 # CONFIG
 # -----------------------------
@@ -35,6 +38,7 @@ engine = FaceEngine()
 # -----------------------------
 
 files = storage.list_files()
+files = files[:MAX_IMAGES]
 
 print(f"\nTotal B2 Files Found: {len(files)}")
 
@@ -59,7 +63,7 @@ for file_data in tqdm(files):
     try:
 
         file_name = file_data["file_name"]
-        file_url = file_data["file_url"]
+        # file_url = file_data["file_url"]
 
         # Temp local path
         temp_path = os.path.join(
@@ -69,7 +73,7 @@ for file_data in tqdm(files):
 
         # Download image
         storage.download_file(
-            file_url,
+            file_name,
             temp_path
         )
 
@@ -85,7 +89,7 @@ for file_data in tqdm(files):
 
         image_mapping[current_id] = {
             "file_name": file_name,
-            "file_url": file_url
+            # "file_url": file_url
         }
 
         current_id += 1
