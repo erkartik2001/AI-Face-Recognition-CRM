@@ -79,22 +79,23 @@ class B2Storage:
 
         return files
     
+    
     def download_file(
         self,
-        file_url,
+        file_name,
         save_path
     ):
 
-        response = requests.get(file_url)
+        downloaded_file = self.bucket.download_file_by_name(
+            file_name
+        )
 
-        if response.status_code == 200:
+        downloaded_file.save_to(save_path)
 
-            with open(save_path, "wb") as f:
-                f.write(response.content)
-
-            return save_path
-
-        else:
-            raise Exception(
-                f"Failed to download file: {file_url}"
-            )
+        return save_path
+    
+    def generate_file_url(self, file_name):
+        return (
+            f"https://f005.backblaze.com/file/"
+            f"{self.bucket_name}/{file_name}"
+        )
