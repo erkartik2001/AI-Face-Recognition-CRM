@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from backend.routes.search_routes import router as search_router
+from backend.routes.upload_routes import router as upload_router
 
 app = FastAPI(
     title= "AI Face Recognition API"
@@ -15,3 +16,4 @@ def home():
 
 # Register routes
 app.include_router(search_router)
+app.include_router(upload_router)
