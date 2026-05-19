@@ -1,12 +1,55 @@
 # AI Face Recognition CRM
 
-## Project Overview
+AI-powered Face Recognition CRM built using:
 
-This project is a simple AI-based face recognition system.
+- FastAPI
+- Streamlit
+- InsightFace
+- FAISS
+- Backblaze B2
 
-The system compares a newly uploaded image with existing images stored in Backblaze B2 cloud storage and returns matching persons/images inside a dashboard (CRM).
+The system allows users to:
 
-The main goal of the project is to build a reliable face recognition pipeline first, then connect it with API and dashboard components.
+- Search similar faces
+- Upload new face images
+- Continuously index images from Backblaze B2
+- Manage users with admin authentication
+
+---
+
+# Features
+
+## Face Recognition
+
+- Face Detection using InsightFace
+- Face Embedding Generation
+- Similarity Search using FAISS
+- Top Match Retrieval
+
+---
+
+## Backblaze B2 Integration
+
+The system works directly with Backblaze B2 cloud storage.
+
+Supports:
+
+- Listing bucket images
+- Downloading images for indexing
+- Uploading new images
+- Generating public URLs
+
+---
+
+## Multi User Authentication
+
+Supports:
+
+- Admin Login
+- User Login
+- Admin Create User
+- Admin Change User Password
+- JWT Authentication
 
 ---
 
@@ -14,17 +57,18 @@ The main goal of the project is to build a reliable face recognition pipeline fi
 
 | Component | Technology |
 |---|---|
-| Frontend Dashboard | Streamlit |
 | Backend API | FastAPI |
+| Frontend CRM | Streamlit |
 | Face Recognition | InsightFace |
 | Vector Search | FAISS |
 | Storage | Backblaze B2 |
-| Database | SQLite |
+| Authentication | JWT |
+| User Storage | JSON |
 | Language | Python |
 
 ---
 
-# Final Project Architecture
+# Project Structure
 
 ```text
 project/
@@ -32,523 +76,292 @@ project/
 ├── backend/
 │   │
 │   ├── main.py
-│   ├── config.py
 │   │
 │   ├── routes/
+│   │   ├── auth_routes.py
 │   │   ├── search_routes.py
-│   │   └── upload_routes.py
+│   │   ├── upload_routes.py
+│   │   └── indexing_routes.py
 │   │
 │   ├── services/
 │   │   ├── face_engine.py
 │   │   ├── matcher.py
-│   │   ├── faiss_manager.py
 │   │   ├── storage_service.py
-│   │   └── db_service.py
+│   │   └── indexing_service.py
 │   │
-│   └── database/
-│       ├── database.py
-│       └── models.py
+│   ├── auth/
+│   │   ├── auth_service.py
+│   │   ├── jwt_handler.py
+│   │   └── users.json
+│   │
+│   └── schemas/
 │
 ├── frontend/
 │   │
 │   ├── app.py
 │   │
-│   └── pages/
-│       ├── upload.py
-│       ├── dashboard.py
-│       └── history.py
-│
-├── dataset/
-│   ├── person_1/
-│   ├── person_2/
-│   └── person_3/
+│   ├── pages/
+│   │   ├── login.py
+│   │   ├── dashboard.py
+│   │   ├── search_face.py
+│   │   ├── upload_face.py
+│   │   ├── indexing.py
+│   │   ├── create_user.py
+│   │   └── change_password.py
+│   │
+│   └── utils/
+│       ├── api_client.py
+│       ├── auth.py
+│       └── session_state.py
 │
 ├── faiss_index/
-│   ├── face_index.bin
+│   ├── face_engine.bin
 │   └── image_mapping.pkl
 │
-├── scripts/
-│   ├── generate_embeddings.py
-│   ├── rebuild_index.py
-│   └── test_pipeline.py
+├── temp/
 │
 ├── uploads/
 │
-├── requirements.txt
-│
 ├── .env
+│
+├── requirements.txt
 │
 └── README.md
 ```
 
 ---
 
-# Architecture Explanation
-
-The project is divided into 3 major parts:
-
----
-
-# 1. Face Recognition Pipeline
-
-This is the core AI system.
-
-Responsible for:
-- face detection
-- embedding generation
-- similarity search
-- face matching
-
-Main files:
-
-```text
-backend/services/
-```
-
----
-
-# 2. Backend API
-
-Responsible for:
-- receiving uploaded images
-- returning search results
-- connecting frontend with AI pipeline
-
-Main files:
-
-```text
-backend/routes/
-```
-
----
-
-# 3. Frontend Dashboard
-
-Responsible for:
-- image upload UI
-- displaying matched faces
-- login/dashboard pages
-
-Main files:
-
-```text
-frontend/
-```
-
----
-
 # System Flow
 
-```text
-User Uploads Image
-        ↓
-FastAPI Receives Image
-        ↓
-Face Detection
-        ↓
-Embedding Generation
-        ↓
-FAISS Similarity Search
-        ↓
-Top Matches Returned
-        ↓
-Results Displayed In Streamlit Dashboard
-```
-
----
-
-# Detailed File Explanation
-
----
-
-# backend/main.py
-
-Main FastAPI application.
-
-Responsibilities:
-- start backend server
-- register API routes
-- initialize application
-
----
-
-# backend/config.py
-
-Stores:
-- environment variables
-- B2 credentials
-- database paths
-- threshold settings
-
----
-
-# backend/routes/
-
-Contains API endpoints.
-
----
-
-## search_routes.py
-
-Handles:
-- face search requests
-
-Example endpoint:
+## Face Search Flow
 
 ```text
-POST /search-face
+Upload Query Image
+        ↓
+Generate Embedding
+        ↓
+Search FAISS Index
+        ↓
+Find Similar Faces
+        ↓
+Return Top Match
 ```
 
 ---
 
-## upload_routes.py
-
-Handles:
-- adding new images to system
-
-Example endpoint:
+## Upload Face Flow
 
 ```text
-POST /upload-face
+Upload Image
+        ↓
+Upload To B2
+        ↓
+Generate Embedding
+        ↓
+Append To FAISS
+        ↓
+Update Mapping
 ```
 
 ---
 
-# backend/services/
-
-Contains core business + AI logic.
-
----
-
-## face_engine.py
-
-Responsible for:
-- loading InsightFace model
-- face detection
-- embedding extraction
-
-Output:
-
-```python
-embedding.shape = (512,)
-```
-
----
-
-## matcher.py
-
-Responsible for:
-- similarity comparison
-- confidence scoring
-- threshold filtering
-
----
-
-## faiss_manager.py
-
-Responsible for:
-- creating FAISS index
-- loading FAISS index
-- saving embeddings
-- nearest-neighbor search
-
----
-
-## storage_service.py
-
-Responsible for:
-- uploading images to Backblaze B2
-- retrieving image URLs
-
----
-
-## db_service.py
-
-Responsible for:
-- saving metadata
-- saving search history
-- retrieving image records
-
----
-
-# backend/database/
-
-Database-related files.
-
----
-
-## database.py
-
-Creates database connection.
-
----
-
-## models.py
-
-Defines tables/models.
-
-Example:
-- users
-- images
-- search_history
-
----
-
-# frontend/app.py
-
-Main Streamlit app.
-
-Responsible for:
-- dashboard routing
-- authentication
-- navigation
-
----
-
-# frontend/pages/
-
-Contains dashboard pages.
-
----
-
-## upload.py
-
-Image upload interface.
-
----
-
-## dashboard.py
-
-Displays:
-- matched faces
-- confidence scores
-- uploaded images
-
----
-
-## history.py
-
-Displays:
-- previous searches
-- logs
-
----
-
-# dataset/
-
-Local testing dataset.
-
-Used during development before full B2 integration.
-
-Example:
+## Indexing Flow
 
 ```text
-dataset/
-   ├── virat/
-   ├── messi/
-   └── robert/
-```
-
----
-
-# faiss_index/
-
-Stores vector index.
-
----
-
-## face_index.bin
-
-Stores FAISS embeddings index.
-
----
-
-## image_mapping.pkl
-
-Maps FAISS vector IDs to image paths.
-
----
-
-# scripts/
-
-Development/testing scripts.
-
----
-
-## generate_embeddings.py
-
-Reads dataset images and creates embeddings.
-
----
-
-## rebuild_index.py
-
-Recreates FAISS index if needed.
-
----
-
-## test_pipeline.py
-
-Used for local testing.
-
-Flow:
-
-```text
-query image
-     ↓
-generate embedding
-     ↓
-search FAISS
-     ↓
-return top matches
-```
-
----
-
-# uploads/
-
-Stores temporary uploaded images.
-
----
-
-# Face Recognition Flow
-
----
-
-# Step 1 — Face Detection
-
-Detect face from uploaded image.
-
-Uses:
-- InsightFace detector
-
----
-
-# Step 2 — Embedding Generation
-
-Convert face into vector embedding.
-
-Example:
-
-```python
-[0.21, -0.55, 0.92, ...]
-```
-
----
-
-# Step 3 — Similarity Search
-
-Search nearest embeddings using FAISS.
-
----
-
-# Step 4 — Match Results
-
-Return:
-- matched images
-- similarity score
-- confidence level
-
----
-
-# Matching Logic
-
-Cosine similarity is used.
-
-Example:
-
-```python
-if similarity > 0.65:
-    match_found = True
-```
-
-Threshold can be adjusted experimentally.
-
----
-
-# Development Flow
-
----
-
-# Phase 1 — Build Pipeline
-
-Goal:
-
-```text
-query image
-    ↓
-find matching faces
-```
-
-No frontend focus initially.
-
----
-
-# Phase 2 — Build API
-
-Connect:
-- upload endpoint
-- search endpoint
-
----
-
-# Phase 3 — Build Dashboard
-
-Add:
-- upload UI
-- results UI
-- login system
-
----
-
-# Phase 4 — Integrate Backblaze B2
-
-Replace local storage with cloud image storage.
-
----
-
-# Running Backend
-
-```bash
-uvicorn backend.main:app --reload
-```
-
----
-
-# Running Frontend
-
-```bash
-streamlit run frontend/app.py
+Read Images From B2
+        ↓
+Download Temp Image
+        ↓
+Generate Embedding
+        ↓
+Store In FAISS
+        ↓
+Save Mapping
 ```
 
 ---
 
 # Environment Variables
 
-Example `.env`
+Create a `.env` file:
 
 ```env
-B2_KEY_ID=xxxx
-B2_APPLICATION_KEY=xxxx
-B2_BUCKET_NAME=xxxx
+B2_KEY_ID=YOUR_KEY_ID
+B2_APPLICATION_KEY=YOUR_APPLICATION_KEY
+B2_BUCKET_NAME=YOUR_BUCKET_NAME
 
-DATABASE_PATH=face_db.sqlite
+SECRET_KEY=your_jwt_secret
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
 ```
 
 ---
 
-# Final Workflow
+# Install Requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+# Run Backend
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+Backend runs on:
 
 ```text
-Upload Image
-      ↓
-Detect Face
-      ↓
-Generate Embedding
-      ↓
-Search Similar Faces
-      ↓
-Return Top Matches
-      ↓
-Display Results In CRM Dashboard
+http://127.0.0.1:8000
 ```
+
+Swagger Docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# Run Frontend
+
+```bash
+streamlit run frontend/app.py
+```
+
+Frontend runs on:
+
+```text
+http://localhost:8501
+```
+
+---
+
+# Admin Capabilities
+
+Admin can:
+
+- Login
+- Create Users
+- Change User Passwords
+- Start B2 Indexing
+- Upload Faces
+- Search Faces
+
+---
+
+# User Capabilities
+
+Users can:
+
+- Login
+- Search Faces
+- Upload Faces
+
+Users CANNOT:
+
+- Create Users
+- Change Other User Passwords
+- Start Indexing
+
+---
+
+# FAISS Files
+
+## face_engine.bin
+
+Stores:
+
+- Face Embeddings
+- Vector Search Index
+
+---
+
+## image_mapping.pkl
+
+Maps:
+
+```python
+vector_id -> file_name
+```
+
+Used to retrieve matched images from B2.
+
+---
+
+# Important Notes
+
+## Indexing Is Required First
+
+Before searching faces:
+
+- images must be indexed first
+
+Use:
+
+```text
+Index Images Page
+```
+
+or
+
+```text
+/start-indexing
+```
+
+API.
+
+---
+
+## Corrupted Images
+
+Some B2 images may be corrupted or truncated.
+
+System automatically:
+
+- skips invalid images
+- continues indexing
+
+---
+
+# Authentication System
+
+Authentication uses:
+
+- JWT Tokens
+- Password Hashing
+- JSON User Storage
+
+No database required for MVP.
+
+---
+
+# Future Improvements
+
+Possible future upgrades:
+
+- PostgreSQL Database
+- Background Indexing Queue
+- GPU Inference
+- Face Clustering
+- Video Face Recognition
+- Search History
+- Role Permissions
+- Docker Deployment
+- Async Processing
+- Real-Time Index Monitoring
+
+---
+
+# MVP Goal
+
+This project is designed as a lightweight MVP CRM for:
+
+- Face Matching
+- Face Search
+- Cloud Image Retrieval
+- Multi User Access
+
+Optimized for fast deployment and low infrastructure complexity.
