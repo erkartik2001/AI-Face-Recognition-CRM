@@ -12,3 +12,6 @@ python-multipart
 b2sdk
 python-dotenv
 requests
+python-jose
+passlib
+bcrypt==4.0.1
