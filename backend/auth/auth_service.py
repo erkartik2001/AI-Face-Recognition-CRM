@@ -2,41 +2,84 @@
 
 import json
 
-from passlib.context import CryptContext
-
-
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
-
 
 USERS_FILE = "backend/users.json"
 
 
 class AuthService:
 
-    def __init__(self):
+    def load_users(self):
 
         with open(USERS_FILE, "r") as f:
-            self.users = json.load(f)
+            return json.load(f)
 
-    def authenticate_user(
+    def save_users(self, users):
+
+        with open(USERS_FILE, "w") as f:
+
+            json.dump(
+                users,
+                f,
+                indent=4
+            )
+
+    def authenticate(
         self,
         username,
         password
     ):
 
-        for user in self.users:
+        users = self.load_users()
+
+        for user in users:
+
+            if (
+                user["username"] == username and
+                user["password"] == password
+            ):
+
+                return user
+
+        return None
+
+    def create_user(
+        self,
+        username,
+        password,
+        role="user"
+    ):
+
+        users = self.load_users()
+
+        for user in users:
+
+            if user["username"] == username:
+                return False
+
+        users.append({
+            "username": username,
+            "password": password,
+            "role": role
+        })
+
+        self.save_users(users)
+
+        return True
+
+    def change_password(
+        self,
+        username,
+        new_password
+    ):
+
+        users = self.load_users()
+
+        for user in users:
 
             if user["username"] == username:
 
-                valid = pwd_context.verify(
-                    password,
-                    user["password"]
-                )
+                user["password"] = new_password
 
-                if valid:
-                    return user
+                break
 
-        return None
+        self.save_users(users)
