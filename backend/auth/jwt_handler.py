@@ -5,6 +5,7 @@ from jose import JWTError
 
 from datetime import datetime
 from datetime import timedelta
+import datetime as dt
 
 
 SECRET_KEY = "super_secret_key"
@@ -19,7 +20,7 @@ def create_token(data: dict):
     payload = data.copy()
 
     payload["exp"] = (
-        datetime.utcnow() +
+        dt.utcnow() +
         timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     )
 
