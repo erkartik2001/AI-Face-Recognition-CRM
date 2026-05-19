@@ -24,14 +24,46 @@ class FaceMatcher:
         self.storage = B2Storage()
 
 
-        # Load FAISS index
-        self.index = faiss.read_index(faiss_index_path)
+        # # Load FAISS index
+        # self.index = faiss.read_index(faiss_index_path)
+        if os.path.exists(faiss_index_path):
 
-        # Load image mappings
-        with open(mapping_path, "rb") as f:
-            self.image_mapping = pickle.load(f)
+            self.index = faiss.read_index(
+                faiss_index_path
+            )
 
-        print("Face Matcher Ready")
+            print("FAISS index loaded")
+
+        else:
+
+            self.index = None
+
+            print("No FAISS index found")
+
+
+
+
+
+
+        # # Load image mappings
+        # with open(mapping_path, "rb") as f:
+        #     self.image_mapping = pickle.load(f)
+
+        # print("Face Matcher Ready")
+        if os.path.exists(mapping_path):
+
+            with open(mapping_path, "rb") as f:
+
+                self.image_mapping = pickle.load(f)
+
+            print("Image mappings loaded")
+
+        else:
+
+            self.image_mapping = {}
+
+            print("No image mappings found")
+
 
 
     def search(
@@ -40,6 +72,19 @@ class FaceMatcher:
         top_k=5,
         threshold=0.5
     ):
+        
+         # -----------------------------
+         # CHECK INDEX
+         # -----------------------------
+
+        if self.index is None:
+
+            return {
+                "success": False,
+                "message": "No indexed faces found"
+            }
+            
+
 
         # Generate embedding
         embedding = self.engine.get_embedding(image_path)
@@ -99,6 +144,28 @@ class FaceMatcher:
         ).astype("float32")
 
 
+
+
+        # -----------------------------
+        # CREATE FAISS IF FIRST VECTOR
+        # -----------------------------
+
+        if self.index is None:
+
+            dimension = embedding.shape[1]
+
+            self.index = faiss.IndexFlatIP(
+                dimension
+            )
+
+            print("New FAISS index created")
+
+
+        # -----------------------------
+        # ADD EMBEDDING
+        # -----------------------------
+
+        # self.index.add(embedding)
         # Add to FAISS
         self.index.add(embedding)
 
