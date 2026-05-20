@@ -1,10 +1,15 @@
 # Verify login
 
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv() #admin env
 
 
 USERS_FILE = "backend/users.json"
-
+uname = os.getenv("ADMIN_USERNAME")
+pswd = os.getenv("ADMIN_PASSWORD")
 
 class AuthService:
 
@@ -28,6 +33,12 @@ class AuthService:
         username,
         password
     ):
+    
+        # if username == uname and password == pswd:
+        #     return {
+        #     "username": uname,
+        #     "role": "admin"
+        # }
 
         users = self.load_users()
 
@@ -71,6 +82,7 @@ class AuthService:
         username,
         new_password
     ):
+        
 
         users = self.load_users()
 
