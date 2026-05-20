@@ -20,7 +20,7 @@ def create_token(data: dict):
     payload = data.copy()
 
     payload["exp"] = (
-        dt.utcnow() +
+        datetime.utcnow() +
         timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     )
 
