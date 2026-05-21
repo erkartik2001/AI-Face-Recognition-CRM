@@ -3,11 +3,10 @@ import shutil
 
 from fastapi import APIRouter, UploadFile, File
 
-from backend.matcher import FaceMatcher
+import backend.app_state as app_state
 
 router = APIRouter()
 
-matcher = FaceMatcher()
 
 UPLOAD_FOLDER = "uploads"
 
@@ -23,7 +22,7 @@ async def search_face(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     #search matches
-    results = matcher.search(file_path)
+    results = app_state.matcher.search(file_path)
 
     return{
         "success" : True,
