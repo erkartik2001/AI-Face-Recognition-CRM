@@ -3,8 +3,7 @@ import numpy as np
 import faiss
 import os
 
-from backend.services.face_engine import FaceEngine
-from backend.services.storage_service import B2Storage
+import backend.app_state as app_state
 
 
 class FaceMatcher:
@@ -15,17 +14,10 @@ class FaceMatcher:
         mapping_path="faiss_index/image_mapping.pkl"
     ):
 
-        print("Loading Face Matcher...")
 
-        # Load face engine
-        self.engine = FaceEngine()
+        self.engine = app_state.face_engine
+        self.storage = app_state.b2_storage
 
-        # b2
-        self.storage = B2Storage()
-
-
-        # # Load FAISS index
-        # self.index = faiss.read_index(faiss_index_path)
         if os.path.exists(faiss_index_path):
 
             self.index = faiss.read_index(
@@ -41,15 +33,6 @@ class FaceMatcher:
             print("No FAISS index found")
 
 
-
-
-
-
-        # # Load image mappings
-        # with open(mapping_path, "rb") as f:
-        #     self.image_mapping = pickle.load(f)
-
-        # print("Face Matcher Ready")
         if os.path.exists(mapping_path):
 
             with open(mapping_path, "rb") as f:
@@ -111,12 +94,6 @@ class FaceMatcher:
                 continue
 
             matched_data = self.image_mapping[idx]
-
-            # results.append({
-            #     "person": matched_data["person"],
-            #     "image_path": matched_data["image_path"],
-            #     "similarity": float(similarity)
-            # })
 
             file_name = matched_data["file_name"]
 
