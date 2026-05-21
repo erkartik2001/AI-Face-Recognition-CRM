@@ -1,7 +1,14 @@
 [
     {
         "username": "admin",
-        "password": "admin1234",
-        "role": "admin"
+        "password": "$2b$12$jIPZtNXhp2D1aYX2I4JunO5CVaui0RtqEm.3gTtGycAFKd68HVQzC",
+        "role": "admin",
+        "totp_secret": "5RPAVMV2AKUTV3K4VOQEXNQMBXAO73WM"
+    },
+    {
+        "username": "kartik",
+        "password": "$2b$12$43BgmVz2E8FDiJ2QRc7MDOx3Q1w8KtHa9osT4sd4lI3hU3epwH43G",
+        "role": "user",
+        "totp_secret": "5LC6JHW3R6LOEYAZD6O3B7E4UMAXIHLX"
     }
 ]
