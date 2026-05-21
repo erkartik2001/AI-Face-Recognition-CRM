@@ -20,7 +20,7 @@ class FaceEngine():
         )
 
         self.app.prepare(ctx_id=0)
-        print("Face Engine Loaded Successfully")
+        # print("Face Engine Loaded Successfully")
 
     
     def get_embedding(self, image_path):
