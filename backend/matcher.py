@@ -10,7 +10,7 @@ class FaceMatcher:
 
     def __init__(
         self,
-        faiss_index_path="faiss_index/face_engine.bin",
+        faiss_index_path="faiss_index/face_engine.index",
         mapping_path="faiss_index/image_mapping.pkl"
     ):
 
@@ -73,6 +73,7 @@ class FaceMatcher:
         embedding = self.engine.get_embedding(image_path)
 
         if embedding is None:
+            print("None is there")
             return []
 
         query_embedding = np.array([embedding]).astype("float32")
@@ -104,7 +105,6 @@ class FaceMatcher:
                 "file_url" : file_url,
                 "similarity":float(similarity)
             })
-
         return results
     
 
@@ -161,7 +161,7 @@ class FaceMatcher:
         # Save updated FAISS index
         faiss.write_index(
             self.index,
-            "faiss_index/face_engine.bin"
+            "faiss_index/face_engine.index"
         )
 
 

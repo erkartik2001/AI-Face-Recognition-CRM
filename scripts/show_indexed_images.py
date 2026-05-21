@@ -9,7 +9,7 @@ with open(MAPPING_PATH, "rb") as f:
     mappings = pickle.load(f)
 
 
-print("\nINDEXED IMAGES:\n")
+print("\nINDEXED IMAGES:\n", len(mappings))
 
 
 for idx, data in mappings.items():

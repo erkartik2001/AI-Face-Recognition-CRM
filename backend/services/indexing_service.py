@@ -17,7 +17,7 @@ class IndexingService:
         self.TEMP_FOLDER = "temp"
 
         self.FAISS_INDEX_PATH = (
-            "faiss_index/face_engine.bin"
+            "faiss_index/face_engine.index"
         )
 
         self.MAPPING_PATH = (

@@ -4,7 +4,7 @@ from backend.services.storage_service import B2Storage
 storage = B2Storage()
 
 
-file_name = "0ED566F5-A9DA-4BCF-817F-1B8251F8456D-0f483d838d9589f64382b9e278ebc052.jpeg"
+file_name = "shyam-pasfoto-346daad5a5bb54a81d5b62fc043476af.jpg"
 
 
 save_path = "query.jpg"
