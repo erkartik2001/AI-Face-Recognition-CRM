@@ -10,7 +10,8 @@ HANDLES:
 import requests
 
 
-BASE_URL = "http://127.0.0.1:8000"
+# BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://c6c7-2401-4900-88f0-b37b-d191-3cab-e9ea-2b67.ngrok-free.app"
 
 
 class APIClient:
