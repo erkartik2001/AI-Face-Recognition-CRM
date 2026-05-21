@@ -6,8 +6,8 @@ import faiss
 
 from tqdm import tqdm
 
-from backend.services.storage_service import B2Storage
-from backend.services.face_engine import FaceEngine
+
+import backend.app_state as app_state
 
 
 class IndexingService:
@@ -33,9 +33,11 @@ class IndexingService:
             exist_ok=True
         )
 
-        self.storage = B2Storage()
 
-        self.engine = FaceEngine()
+        self.storage = app_state.b2_storage
+        self.engine = app_state.face_engine
+
+
 
     def start_indexing(
         self,
