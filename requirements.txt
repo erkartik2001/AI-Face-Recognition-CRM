@@ -16,3 +16,7 @@ python-jose
 passlib
 bcrypt==4.0.1
 streamlit
+pyotp
+qrcode[pil]
+passlib[bcrypt]
+qrcode
