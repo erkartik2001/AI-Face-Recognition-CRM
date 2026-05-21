@@ -6,9 +6,13 @@ from jose import JWTError
 from datetime import datetime
 from datetime import timedelta
 import datetime as dt
+import os
+from dotenv import load_dotenv
+
+load_dotenv
 
 
-SECRET_KEY = "super_secret_key"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 ALGORITHM = "HS256"
 
