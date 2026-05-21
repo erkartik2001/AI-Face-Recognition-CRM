@@ -2,14 +2,19 @@
 
 import json
 import os
-from dotenv import load_dotenv
 
-load_dotenv() #admin env
+import pyotp
+
+from passlib.context import CryptContext
 
 
 USERS_FILE = "backend/users.json"
-uname = os.getenv("ADMIN_USERNAME")
-pswd = os.getenv("ADMIN_PASSWORD")
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
 
 class AuthService:
 
@@ -28,30 +33,89 @@ class AuthService:
                 indent=4
             )
 
+    # =========================================
+    # HASH PASSWORD
+    # =========================================
+
+    def hash_password(self, password):
+
+        return pwd_context.hash(password)
+
+    # =========================================
+    # VERIFY PASSWORD
+    # =========================================
+
+    def verify_password(
+        self,
+        plain_password,
+        hashed_password
+    ):
+
+        return pwd_context.verify(
+            plain_password,
+            hashed_password
+        )
+
+    # =========================================
+    # AUTHENTICATE
+    # =========================================
+
+    # def authenticate(
+    #     self,
+    #     username,
+    #     password
+    # ):
+
+    #     users = self.load_users()
+
+    #     for user in users:
+
+    #         if user["username"] == username:
+
+    #             valid = self.verify_password(
+    #                 password,
+    #                 user["password"]
+    #             )
+
+    #             if valid:
+    #                 return user
+
+    #     return None
+
+
     def authenticate(
         self,
         username,
         password
     ):
-    
-        # if username == uname and password == pswd:
-        #     return {
-        #     "username": uname,
-        #     "role": "admin"
-        # }
 
         users = self.load_users()
 
+        print(users)
+
         for user in users:
 
-            if (
-                user["username"] == username and
-                user["password"] == password
-            ):
+            print("CHECKING USER")
 
-                return user
+            if user["username"] == username:
+
+                print("USERNAME MATCHED")
+
+                valid = pwd_context.verify(
+                    password,
+                    user["password"]
+                )
+
+                print("PASSWORD VALID:", valid)
+
+                if valid:
+                    return user
 
         return None
+
+    # =========================================
+    # CREATE USER
+    # =========================================
 
     def create_user(
         self,
@@ -67,22 +131,37 @@ class AuthService:
             if user["username"] == username:
                 return False
 
+        hashed_password = self.hash_password(
+            password
+        )
+
+        totp_secret = pyotp.random_base32()
+
         users.append({
+
             "username": username,
-            "password": password,
-            "role": role
+
+            "password": hashed_password,
+
+            "role": role,
+
+            "totp_secret": totp_secret
+
         })
 
         self.save_users(users)
 
-        return True
+        return totp_secret
 
-    def change_password(
+    # =========================================
+    # VERIFY OTP
+    # =========================================
+
+    def verify_otp(
         self,
         username,
-        new_password
+        otp
     ):
-        
 
         users = self.load_users()
 
@@ -90,7 +169,33 @@ class AuthService:
 
             if user["username"] == username:
 
-                user["password"] = new_password
+                totp = pyotp.TOTP(
+                    user["totp_secret"]
+                )
+
+                return totp.verify(otp)
+
+        return False
+
+    # =========================================
+    # CHANGE PASSWORD
+    # =========================================
+
+    def change_password(
+        self,
+        username,
+        new_password
+    ):
+
+        users = self.load_users()
+
+        for user in users:
+
+            if user["username"] == username:
+
+                user["password"] = self.hash_password(
+                    new_password
+                )
 
                 break
 
