@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
-
+import threading
 from pydantic import BaseModel
 
 from backend.auth.dependencies import (
@@ -14,9 +14,6 @@ from backend.services.indexing_service import (
 
 
 router = APIRouter()
-
-service = IndexingService()
-
 
 class IndexRequest(BaseModel):
 
@@ -40,8 +37,14 @@ async def start_indexing(
             detail="Admin only"
         )
 
-    result = service.start_indexing(
-        batch_size=request.count
-    )
+    service = IndexingService()
+    
 
-    return result
+    thread = threading.Thread(target=service.start_indexing)
+
+    thread.start()
+
+    return {
+        "success": True,
+        "message": "Indexing started"
+    }
