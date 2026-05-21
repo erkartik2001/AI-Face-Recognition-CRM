@@ -1,5 +1,10 @@
 # Login API
 
+import pyotp
+import qrcode
+import io
+import base64
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -24,6 +29,7 @@ class LoginRequest(BaseModel):
 
     username: str
     password: str
+    otp: str | None = None
 
 
 class CreateUserRequest(BaseModel):
@@ -37,6 +43,7 @@ class ChangePasswordRequest(BaseModel):
 
     username : str
     new_password: str
+
 
 
 @router.post("/login")
@@ -54,15 +61,38 @@ async def login(request: LoginRequest):
             detail="Invalid credentials"
         )
 
+    # STEP 1:
+    # Password correct but OTP not sent yet
+    if not request.otp:
+
+        return {
+            "success": True,
+            "requires_2fa": True
+        }
+
+    # STEP 2:
+    # Verify OTP
+    valid_otp = auth_service.verify_otp(
+        request.username,
+        request.otp
+    )
+
+    if not valid_otp:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid OTP"
+        )
+
     token = create_token({
         "username": user["username"],
         "role": user["role"]
     })
 
     return {
+        "success": True,
         "access_token": token
     }
-
 
 @router.post("/create-user")
 async def create_user(
@@ -77,21 +107,43 @@ async def create_user(
             detail="Admin only"
         )
 
-    success = auth_service.create_user(
+    totp_secret = auth_service.create_user(
         request.username,
         request.password,
         request.role
     )
 
-    if not success:
+    if not totp_secret:
 
         raise HTTPException(
             status_code=400,
             detail="Username already exists"
         )
 
+    totp_uri = pyotp.totp.TOTP(
+        totp_secret
+    ).provisioning_uri(
+
+        name=request.username,
+
+        issuer_name="AI Face CRM"
+    )
+
+    qr = qrcode.make(totp_uri)
+
+    buffer = io.BytesIO()
+
+    qr.save(buffer, format="PNG")
+
+    qr_base64 = base64.b64encode(
+        buffer.getvalue()
+    ).decode()
+
     return {
-        "message": "User created"
+
+        "success": True,
+
+        "qr_code": qr_base64
     }
 
 
@@ -122,3 +174,34 @@ async def me(
 ):
 
     return current_user
+
+import pyotp
+
+
+@router.get("/setup-2fa/{username}")
+async def setup_2fa(username: str):
+
+    users = auth_service.load_users()
+
+    for user in users:
+
+        if user["username"] == username:
+
+            secret = user["totp_secret"]
+
+            totp = pyotp.TOTP(secret)
+
+            provisioning_uri = totp.provisioning_uri(
+                name=username,
+                issuer_name="AI Face CRM"
+            )
+
+            return {
+                "secret": secret,
+                "qr_url": provisioning_uri
+            }
+
+    raise HTTPException(
+        status_code=404,
+        detail="User not found"
+    )
