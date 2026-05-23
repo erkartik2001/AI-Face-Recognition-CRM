@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 from b2sdk.v2 import InMemoryAccountInfo
 from b2sdk.v2 import B2Api
 
-import requests
-
+from urllib.parse import quote
 
 load_dotenv()
 
@@ -23,11 +22,18 @@ class B2Storage:
 
         self.b2_api = B2Api(info)
 
-        self.b2_api.authorize_account(
+        self.b2_api.authorize_account( 
             "production",
             self.key_id,
             self.application_key
         )
+
+        account_info = self.b2_api.account_info
+
+        self.auth_token = account_info.get_account_auth_token()
+
+        self.download_url = account_info.get_download_url()
+
 
         # Get bucket
         self.bucket = self.b2_api.get_bucket_by_name(
@@ -99,3 +105,19 @@ class B2Storage:
             f"https://f005.backblaze.com/file/"
             f"{self.bucket_name}/{file_name}"
         )
+    
+    def generate_file_url_show(
+        self,
+        file_name
+    ):
+
+        encoded_file_name = quote(file_name)
+
+        return (
+            f"{self.download_url}/file/"
+            f"{self.bucket_name}/"
+            f"{encoded_file_name}"
+            f"?Authorization={self.auth_token}"
+        )
+
+    
