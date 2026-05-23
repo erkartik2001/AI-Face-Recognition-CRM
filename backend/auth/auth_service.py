@@ -6,7 +6,7 @@ import os
 import pyotp
 
 from passlib.context import CryptContext
-
+from datetime import datetime
 
 USERS_FILE = "backend/users.json"
 
@@ -55,32 +55,6 @@ class AuthService:
             plain_password,
             hashed_password
         )
-
-    # =========================================
-    # AUTHENTICATE
-    # =========================================
-
-    # def authenticate(
-    #     self,
-    #     username,
-    #     password
-    # ):
-
-    #     users = self.load_users()
-
-    #     for user in users:
-
-    #         if user["username"] == username:
-
-    #             valid = self.verify_password(
-    #                 password,
-    #                 user["password"]
-    #             )
-
-    #             if valid:
-    #                 return user
-
-    #     return None
 
 
     def authenticate(
@@ -145,8 +119,11 @@ class AuthService:
 
             "role": role,
 
-            "totp_secret": totp_secret
+            "totp_secret": totp_secret,
 
+            "created_at" : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+            "last_login" : None
         })
 
         self.save_users(users)
@@ -172,6 +149,8 @@ class AuthService:
                 totp = pyotp.TOTP(
                     user["totp_secret"]
                 )
+
+                user["last_login"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 return totp.verify(otp)
 
