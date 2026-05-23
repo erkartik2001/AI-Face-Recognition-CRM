@@ -158,6 +158,13 @@ async def change_password(
     #     request.new_password
     # )
 
+    if current_user["role"] != "admin":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Admin only"
+        )
+
     auth_service.change_password(
         request.username,
         request.new_password
@@ -205,3 +212,37 @@ async def setup_2fa(username: str):
         status_code=404,
         detail="User not found"
     )
+
+@router.get("/users")
+async def get_users(
+    current_user=Depends(get_current_user)
+):
+
+    if current_user["role"] != "admin":
+
+        return {
+            "success": False,
+            "message": "Admin only"
+        }
+
+    users = auth_service.load_users()
+
+    clean_users = []
+
+    for user in users:
+
+        clean_users.append({
+
+            "username": user["username"],
+            "role": user["role"],
+            "created_at": user["created_at"],
+            "last_login" :user["last_login"]
+
+        })
+
+    return {
+
+        "success": True,
+        "users": clean_users
+
+    }
