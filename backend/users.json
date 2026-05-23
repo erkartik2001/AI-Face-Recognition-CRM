@@ -3,12 +3,16 @@
         "username": "admin",
         "password": "$2b$12$jIPZtNXhp2D1aYX2I4JunO5CVaui0RtqEm.3gTtGycAFKd68HVQzC",
         "role": "admin",
-        "totp_secret": "5RPAVMV2AKUTV3K4VOQEXNQMBXAO73WM"
+        "totp_secret": "5RPAVMV2AKUTV3K4VOQEXNQMBXAO73WM",
+        "created_at": "2026-05-20 10:14:17",
+        "last_login": "2026-05-23 12:14:17"
     },
     {
-        "username": "kartik",
-        "password": "$2b$12$43BgmVz2E8FDiJ2QRc7MDOx3Q1w8KtHa9osT4sd4lI3hU3epwH43G",
+        "username": "Kartik Baderiya",
+        "password": "$2b$12$Cr71VPbftzLCUru79eiF5eHoZl0bI3efNo4m/HL1WmElk4WBZmsR6",
         "role": "user",
-        "totp_secret": "5LC6JHW3R6LOEYAZD6O3B7E4UMAXIHLX"
+        "totp_secret": "7K4WJZ4CVB675TYJ3NNHVAK7HTTZX7ET",
+        "created_at": "2026-05-23 13:39:15",
+        "last_login": null
     }
 ]
