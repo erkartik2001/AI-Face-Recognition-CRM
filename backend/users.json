@@ -1,9 +1,9 @@
 [
     {
         "username": "admin",
-        "password": "$2b$12$jIPZtNXhp2D1aYX2I4JunO5CVaui0RtqEm.3gTtGycAFKd68HVQzC",
+        "password": "$2b$12$uLpCPq8tsO.gSQIJUNlPzORWhl1K173mHegtjH41OUlzO34/NMDsS",
         "role": "admin",
-        "totp_secret": "5RPAVMV2AKUTV3K4VOQEXNQMBXAO73WM",
+        "totp_secret": "4HNO6425KHBGHIUWMOW6B32RX7FT6JEX",
         "created_at": "2026-05-20 10:14:17",
         "last_login": "2026-05-23 12:14:17"
     },
@@ -13,6 +13,14 @@
         "role": "user",
         "totp_secret": "7K4WJZ4CVB675TYJ3NNHVAK7HTTZX7ET",
         "created_at": "2026-05-23 13:39:15",
+        "last_login": null
+    },
+    {
+        "username": "vinay",
+        "password": "$2b$12$pGju2xRkXVDTNui9TSCzLuUYq94.6HIqL9vbnzGEA9tJEEmSQYfja",
+        "role": "user",
+        "totp_secret": "EMQNUFUYMTTZKQAE2JYD7H6S57UEYWB6",
+        "created_at": "2026-05-23 15:48:04",
         "last_login": null
     }
 ]

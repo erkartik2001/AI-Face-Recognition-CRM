@@ -11,7 +11,13 @@ import backend.app_state as app_state
 
 from backend.services.face_engine import FaceEngine
 from backend.services.storage_service import B2Storage
+from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+frontend_origin = os.getenv("FRONTEND_ORIGIN")
 
 
 @asynccontextmanager
@@ -38,9 +44,28 @@ async def lifespan(app: FastAPI):
 
 
 
+
+
 app = FastAPI(
     title= "AI Face Recognition API", lifespan=lifespan
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        frontend_origin,
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# @app.post("/login")
+# async def login():
+#     return {"message": "success"}
+
+
+
 
 @app.get("/")
 def home():
