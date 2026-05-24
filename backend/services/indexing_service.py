@@ -110,7 +110,7 @@ class IndexingService:
         # -----------------------------
 
 
-        for file_data in tqdm(files):
+        for file_data in files:
 
             if not batch_size:
 
@@ -168,13 +168,13 @@ class IndexingService:
             # NO EMBEDDINGS
             # -----------------------------
 
-            if len(new_embeddings) == 0:
+                if len(new_embeddings) == 0:
 
-                return {
+                    return {
 
-                    "success": False,
-                    "message": "No embeddings generated"
-                }
+                        "success": False,
+                        "message": "No embeddings generated"
+                    }
 
         # -----------------------------
         # NUMPY
