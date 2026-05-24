@@ -1,14 +1,6 @@
 [build]
-builder = "RAILPACK"
-
-[railpack]
-aptPkgs = [
-    "libxcb1",
-    "libxrender1",
-    "libxext6",
-    "libsm6",
-    "libglib2.0-0"
-]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port 8000"
