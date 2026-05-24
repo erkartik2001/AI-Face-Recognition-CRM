@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libsm6 \
     libglib2.0-0 \
-    libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies
