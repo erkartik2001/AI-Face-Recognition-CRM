@@ -1,8 +1,0 @@
-myenv
-__pycache__
-*.pyc
-.git
-.env
-uploads
-temp
-faiss_index
