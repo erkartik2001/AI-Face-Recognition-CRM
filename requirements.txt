@@ -1,7 +1,7 @@
 insightface
 onnxruntime
 faiss-cpu
-numpy
+numpy<2
 pillow
 tqdm
 
