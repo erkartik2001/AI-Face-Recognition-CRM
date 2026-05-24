@@ -109,119 +109,125 @@ class IndexingService:
         # PROCESS FILES
         # -----------------------------
 
+
         for file_data in tqdm(files):
 
-            try:
+            if not batch_size:
 
-                file_name = file_data["file_name"]
+                try:
 
-                temp_path = os.path.join(
-                    self.TEMP_FOLDER,
-                    file_name.replace("/", "_")
-                )
+                    file_name = file_data["file_name"]
 
-                # DOWNLOAD
-                self.storage.download_file(
-                    file_name,
-                    temp_path
-                )
+                    temp_path = os.path.join(
+                        self.TEMP_FOLDER,
+                        file_name.replace("/", "_")
+                    )
 
-                # EMBEDDING
-                embedding = (
-                    self.engine.get_embedding(
+                    # DOWNLOAD
+                    self.storage.download_file(
+                        file_name,
                         temp_path
                     )
-                )
 
-                # REMOVE TEMP
-                os.remove(temp_path)
 
-                if embedding is None:
+                    # EMBEDDING
+                    embedding = (
+                        self.engine.get_embedding(
+                            temp_path
+                        )
+                    )
 
-                    continue
+                    # REMOVE TEMP
+                    os.remove(temp_path)
 
-                new_embeddings.append(
-                    embedding
-                )
+                    if embedding is None:
 
-                image_mapping[current_id] = {
+                        continue
 
-                    "file_name": file_name
+                    new_embeddings.append(
+                        embedding
+                    )
 
+                    image_mapping[current_id] = {
+
+                        "file_name": file_name
+
+                    }
+
+                    current_id += 1
+
+                    processed += 1
+
+                    break
+
+                except Exception as e:
+
+                    print(e)
+
+            # -----------------------------
+            # NO EMBEDDINGS
+            # -----------------------------
+
+            if len(new_embeddings) == 0:
+
+                return {
+
+                    "success": False,
+                    "message": "No embeddings generated"
                 }
-
-                current_id += 1
-
-                processed += 1
-
-                break
-
-            except Exception as e:
-
-                print(e)
-
-        # -----------------------------
-        # NO EMBEDDINGS
-        # -----------------------------
-
-        if len(new_embeddings) == 0:
-
-            return {
-
-                "success": False,
-                "message": "No embeddings generated"
-            }
 
         # -----------------------------
         # NUMPY
         # -----------------------------
 
-        new_embeddings = np.array(
-            new_embeddings
-        ).astype("float32")
+        if not batch_size:
 
-        # -----------------------------
-        # CREATE FAISS
-        # -----------------------------
+            new_embeddings = np.array(
+                new_embeddings
+            ).astype("float32")
 
-        if index is None:
+            # -----------------------------
+            # CREATE FAISS
+            # -----------------------------
 
-            dimension = (
-                new_embeddings.shape[1]
+            if index is None:
+
+                dimension = (
+                    new_embeddings.shape[1]
+                )
+
+                index = faiss.IndexFlatIP(
+                    dimension
+                )
+
+            # -----------------------------
+            # APPEND
+            # -----------------------------
+
+            index.add(new_embeddings)
+
+            # -----------------------------
+            # SAVE FAISS
+            # -----------------------------
+
+            faiss.write_index(
+                index,
+                self.FAISS_INDEX_PATH
             )
 
-            index = faiss.IndexFlatIP(
-                dimension
-            )
+            # -----------------------------
+            # SAVE MAPPINGS
+            # -----------------------------
 
-        # -----------------------------
-        # APPEND
-        # -----------------------------
+            with open(
+                self.MAPPING_PATH,
+                "wb"
+            ) as f:
 
-        index.add(new_embeddings)
-
-        # -----------------------------
-        # SAVE FAISS
-        # -----------------------------
-
-        faiss.write_index(
-            index,
-            self.FAISS_INDEX_PATH
-        )
-
-        # -----------------------------
-        # SAVE MAPPINGS
-        # -----------------------------
-
-        with open(
-            self.MAPPING_PATH,
-            "wb"
-        ) as f:
-
-            pickle.dump(
-                image_mapping,
-                f
-            )
+                pickle.dump(
+                    image_mapping,
+                    f
+                )
 
         # -----------------------------
         # UPDATE STATE
@@ -229,7 +235,7 @@ class IndexingService:
 
         state["last_indexed"] = (
 
-            last_indexed + len(files)
+            last_indexed + batch_size
 
         )
 

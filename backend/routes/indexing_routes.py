@@ -38,19 +38,19 @@ async def start_indexing(
             status_code=403,
             detail="Admin only"
         )
+    
+    count = request.count
 
     service = IndexingService()
     
+    response = service.start_indexing(batch_size=count)
 
-    thread = threading.Thread(target=service.start_indexing)
+    if count<=50:
+        seconds = random.randint(80,90)
 
-    thread.start()
-
-    seconds = random.randint(30, 60)
+    else:
+        seconds = random.randint(200, 400)
 
     time.sleep(seconds)
 
-    return {
-        "success": True,
-        "message": "Indexing Completed"
-    }
+    return response
