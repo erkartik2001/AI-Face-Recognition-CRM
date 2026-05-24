@@ -29,4 +29,5 @@ RUN pip install --no-cache-dir --no-deps opencv-python-headless==4.9.0.80 && \
 # Copy application source
 COPY . .
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
