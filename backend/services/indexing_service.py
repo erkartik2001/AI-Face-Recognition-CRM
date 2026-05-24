@@ -254,11 +254,8 @@ class IndexingService:
 
             "success": True,
 
-            "processed": processed,
+            "processed": batch_size,
 
             "last_indexed":
-                state["last_indexed"],
-
-            "total_vectors":
-                index.ntotal
+                state["last_indexed"]
         }
