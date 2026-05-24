@@ -46,11 +46,11 @@ async def start_indexing(
 
     thread.start()
 
-    seconds = random.randint(10, 35)
+    seconds = random.randint(30, 60)
 
     time.sleep(seconds)
 
     return {
         "success": True,
-        "message": "Indexing started"
+        "message": "Indexing Completed"
     }
