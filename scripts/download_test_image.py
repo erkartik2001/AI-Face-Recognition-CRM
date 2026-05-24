@@ -4,10 +4,10 @@ from backend.services.storage_service import B2Storage
 storage = B2Storage()
 
 
-file_name = "shyam-pasfoto-346daad5a5bb54a81d5b62fc043476af.jpg"
+file_name = "HAMIZAN-ABDULLAH-PHOTO-be4e0ed4d79a30e903b445eecfd51bf5.png"
 
 
-save_path = "query.jpg"
+save_path = "query2.jpg"
 
 
 storage.download_file(

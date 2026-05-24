@@ -61,7 +61,7 @@ class IndexingService:
         all_files = self.storage.list_files()
 
         files = all_files[
-            last_indexed:last_indexed + batch_size
+            last_indexed:last_indexed + 1
         ]
 
         # -----------------------------

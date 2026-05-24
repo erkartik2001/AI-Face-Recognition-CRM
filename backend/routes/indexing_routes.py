@@ -3,6 +3,8 @@ from fastapi import Depends
 from fastapi import HTTPException
 import threading
 from pydantic import BaseModel
+import time
+import random
 
 from backend.auth.dependencies import (
     get_current_user
@@ -43,6 +45,10 @@ async def start_indexing(
     thread = threading.Thread(target=service.start_indexing)
 
     thread.start()
+
+    seconds = random.randint(10, 35)
+
+    time.sleep(seconds)
 
     return {
         "success": True,
