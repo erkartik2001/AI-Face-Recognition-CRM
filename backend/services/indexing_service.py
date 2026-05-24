@@ -154,6 +154,8 @@ class IndexingService:
 
                 processed += 1
 
+                break
+
             except Exception as e:
 
                 print(e)
