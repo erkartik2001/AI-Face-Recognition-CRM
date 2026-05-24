@@ -13,3 +13,6 @@ pkgs = [
     "xorg.libXext",
     "xorg.libxcb"
 ]
+
+[variables]
+QT_QPA_PLATFORM = "offscreen"
