@@ -3,3 +3,13 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+
+[nixpacks]
+pkgs = [
+    "glib",
+    "libGL",
+    "libxkbcommon",
+    "xorg.libX11",
+    "xorg.libXext",
+    "xorg.libxcb"
+]

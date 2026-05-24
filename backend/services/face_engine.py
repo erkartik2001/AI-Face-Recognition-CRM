@@ -3,10 +3,9 @@
 # Generate embedding
 # Output 512-dimensional vector
 
-# import cv2
+import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
-from PIL import Image
 
 class FaceEngine():
 
@@ -30,8 +29,7 @@ class FaceEngine():
         """
 
         # Read image
-        # image = cv2.imread(image_path)
-        image = Image.open(image_path).convert("RGB")
+        image = cv2.imread(image_path)
 
         if image is None:
             raise ValueError(f"Could not read image: {image_path}")
