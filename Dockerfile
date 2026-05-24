@@ -9,14 +9,17 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libsm6 \
     libglib2.0-0 \
+    libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install Python dependencies
 COPY requirements.txt .
 
-# Force headless OpenCV so the GUI variant from insightface's transitive deps
-# never gets installed, then install the rest of requirements normally
-RUN pip install --no-cache-dir opencv-python-headless && \
+# Install opencv-python-headless with --no-deps so pip cannot replace it with
+# the GUI variant (opencv-python) when insightface's transitive deps are later
+# resolved. The package is already present and satisfies the opencv requirement,
+# so the subsequent full requirements install leaves it untouched.
+RUN pip install --no-cache-dir --no-deps opencv-python-headless==4.9.0.80 && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application source
