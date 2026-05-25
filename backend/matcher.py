@@ -97,15 +97,21 @@ class FaceMatcher:
             matched_data = self.image_mapping[idx]
 
             file_name = matched_data["file_name"]
+            bucket_name = matched_data.get("bucket_name")
 
-            file_url = self.storage.generate_file_url(file_name)
-            show_file_url = self.storage.generate_file_url_show(file_name)
+            file_url = self.storage.generate_file_url(
+                file_name, bucket_name
+            )
+            show_file_url = self.storage.generate_file_url_show(
+                file_name, bucket_name
+            )
 
             results.append({
-                "file_name":file_name,
-                "file_url" : file_url,
-                "show_file_url" : show_file_url,
-                "similarity":float(similarity)
+                "file_name": file_name,
+                "file_url": file_url,
+                "show_file_url": show_file_url,
+                "similarity": float(similarity),
+                "bucket_name": bucket_name or self.storage.bucket_name
             })
         return results
     
