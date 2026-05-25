@@ -179,3 +179,34 @@ class AuthService:
                 break
 
         self.save_users(users)
+
+    # =========================================
+    # DELETE USER
+    # =========================================
+
+    def delete_user(self, username):
+
+        users = self.load_users()
+
+        original_count = len(users)
+
+        users = [
+            u for u in users
+            if u["username"] != username
+        ]
+
+        if len(users) == original_count:
+            return False
+
+        self.save_users(users)
+
+        return True
+
+    # =========================================
+    # GET USER COUNT
+    # =========================================
+
+    def get_user_count(self):
+
+        users = self.load_users()
+        return len(users)
