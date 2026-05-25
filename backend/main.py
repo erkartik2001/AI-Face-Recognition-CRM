@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from backend.routes.search_routes import router as search_router
 from backend.routes.auth_routes import router as auth_router
 from backend.routes.indexing_routes import router as indexing_router
+from backend.routes.bucket_routes import router as bucket_router
 from backend.matcher import FaceMatcher
 from contextlib import asynccontextmanager
 
@@ -69,12 +70,37 @@ app.add_middleware(
 
 @app.get("/")
 def home():
+    return {
+        "message": "AI Face Recognition API Running"
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "face_engine": app_state.face_engine is not None,
+        "b2_storage": app_state.b2_storage is not None,
+        "matcher": app_state.matcher is not None,
+        "sync_in_progress": app_state.sync_in_progress
+    }
+
+
+@app.get("/index-stats")
+def index_stats():
+    m = app_state.matcher
+    if m is None:
+        return {"success": False, "message": "Matcher not loaded"}
 
     return {
-        "message" :  "AI Face Recognition API Running"
+        "success": True,
+        "total_vectors": m.index.ntotal if m.index else 0,
+        "total_mappings": len(m.image_mapping)
     }
+
 
 # Register routes
 app.include_router(search_router)
 app.include_router(auth_router)
 app.include_router(indexing_router)
+app.include_router(bucket_router)
