@@ -100,24 +100,76 @@ class B2Storage:
 
         return save_path
     
-    def generate_file_url(self, file_name):
+    def generate_file_url(self, file_name, bucket_name=None):
+        bname = bucket_name or self.bucket_name
         return (
             f"https://f005.backblaze.com/file/"
-            f"{self.bucket_name}/{file_name}"
+            f"{bname}/{file_name}"
         )
     
     def generate_file_url_show(
         self,
-        file_name
+        file_name,
+        bucket_name=None
     ):
-
+        bname = bucket_name or self.bucket_name
         encoded_file_name = quote(file_name)
 
         return (
             f"{self.download_url}/file/"
-            f"{self.bucket_name}/"
+            f"{bname}/"
             f"{encoded_file_name}"
             f"?Authorization={self.auth_token}"
         )
 
-    
+    def list_files_in_bucket(self, bucket_name=None):
+        """List files in a specific bucket."""
+
+        if bucket_name and bucket_name != self.bucket_name:
+            bucket = self.b2_api.get_bucket_by_name(
+                bucket_name
+            )
+        else:
+            bucket = self.bucket
+            bucket_name = self.bucket_name
+
+        files = []
+
+        for file_version, folder_name in bucket.ls():
+
+            file_name = file_version.file_name
+
+            file_url = (
+                f"https://f005.backblazeb2.com/file/"
+                f"{bucket_name}/{file_name}"
+            )
+
+            files.append({
+                "file_name": file_name,
+                "file_url": file_url
+            })
+
+        return files
+
+    def download_file_from_bucket(
+        self,
+        file_name,
+        save_path,
+        bucket_name=None
+    ):
+        """Download a file from a specific bucket."""
+
+        if bucket_name and bucket_name != self.bucket_name:
+            bucket = self.b2_api.get_bucket_by_name(
+                bucket_name
+            )
+        else:
+            bucket = self.bucket
+
+        downloaded_file = bucket.download_file_by_name(
+            file_name
+        )
+
+        downloaded_file.save_to(save_path)
+
+        return save_path
