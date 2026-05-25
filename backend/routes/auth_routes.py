@@ -45,6 +45,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class DeleteUserRequest(BaseModel):
+
+    username: str
+
+
 
 @router.post("/login")
 async def login(request: LoginRequest):
@@ -175,6 +180,43 @@ async def change_password(
     }
 
 
+@router.post("/delete-user")
+async def delete_user(
+    request: DeleteUserRequest,
+    current_user=Depends(get_current_user)
+):
+
+    if current_user["role"] != "admin":
+
+        raise HTTPException(
+            status_code=403,
+            detail="Admin only"
+        )
+
+    if request.username == current_user["username"]:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete yourself"
+        )
+
+    result = auth_service.delete_user(
+        request.username
+    )
+
+    if not result:
+
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "success": True,
+        "message": f"User '{request.username}' deleted"
+    }
+
+
 @router.get("/me")
 async def me(
     current_user=Depends(get_current_user)
@@ -186,7 +228,16 @@ import pyotp
 
 
 @router.get("/setup-2fa/{username}")
-async def setup_2fa(username: str):
+async def setup_2fa(
+    username: str,
+    current_user=Depends(get_current_user)
+):
+    # Admin or self only
+    if current_user["role"] != "admin" and current_user["username"] != username:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
 
     users = auth_service.load_users()
 
