@@ -1,5 +1,4 @@
 import os
-import json
 import pickle
 import numpy as np
 import faiss
@@ -7,8 +6,10 @@ from datetime import datetime
 
 import backend.app_state as app_state
 
+from backend.database import SessionLocal
+from backend.models import IndexingState
 
-INDEXING_STATE_PATH = "faiss_index/indexing_state.json"
+
 FAISS_INDEX_PATH = "faiss_index/face_engine.index"
 MAPPING_PATH = "faiss_index/image_mapping.pkl"
 TEMP_FOLDER = "temp"
@@ -24,56 +25,104 @@ class IndexingService:
         self.engine = app_state.face_engine
 
     # =========================================
-    # STATE MANAGEMENT (per-bucket)
+    # STATE MANAGEMENT (per-bucket, via DB)
     # =========================================
+
+    def _get_db(self):
+        return SessionLocal()
 
     def load_state(self):
         """
-        Load per-bucket indexing state.
-        Migrates old format {"last_indexed": N}
-        to new format {"bucket_name": {...}} on first call.
+        Load per-bucket indexing state from DB.
+        Returns dict in old format: {bucket_name: {...}}
         """
 
-        if not os.path.exists(INDEXING_STATE_PATH):
-            return {}
+        db = self._get_db()
 
-        with open(INDEXING_STATE_PATH, "r") as f:
-            state = json.load(f)
+        try:
+            states = db.query(IndexingState).all()
 
-        # Migrate old single-bucket format
-        if "last_indexed" in state and isinstance(
-            state.get("last_indexed"), int
-        ):
-            old_last = state["last_indexed"]
-            bucket_name = os.getenv(
-                "B2_BUCKET_NAME", "unknown"
-            )
+            result = {}
 
-            new_state = {
-                bucket_name: {
-                    "last_indexed": old_last,
-                    "total_files": None,
-                    "last_sync_date": None
+            for s in states:
+                result[s.bucket_name] = s.to_dict()
+
+            return result
+
+        finally:
+            db.close()
+
+    def save_bucket_state(
+        self, bucket_name, last_indexed,
+        total_files, last_sync_date=None
+    ):
+        """Save indexing state for a specific bucket."""
+
+        db = self._get_db()
+
+        try:
+            state = db.query(IndexingState).filter(
+                IndexingState.bucket_name == bucket_name
+            ).first()
+
+            if state:
+                state.last_indexed = last_indexed
+                state.total_files = total_files
+
+                if last_sync_date:
+                    state.last_sync_date = last_sync_date
+
+            else:
+                state = IndexingState(
+                    bucket_name=bucket_name,
+                    last_indexed=last_indexed,
+                    total_files=total_files,
+                    last_sync_date=last_sync_date
+                )
+                db.add(state)
+
+            db.commit()
+
+        except Exception:
+            db.rollback()
+            raise
+
+        finally:
+            db.close()
+
+    def get_bucket_state(self, bucket_name):
+        """Get indexing state for a specific bucket."""
+
+        db = self._get_db()
+
+        try:
+            state = db.query(IndexingState).filter(
+                IndexingState.bucket_name == bucket_name
+            ).first()
+
+            if state:
+                return {
+                    "last_indexed": state.last_indexed,
+                    "total_files": state.total_files,
+                    "last_sync_date": (
+                        state.last_sync_date.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if state.last_sync_date else None
+                    )
                 }
+
+            return {
+                "last_indexed": 0,
+                "total_files": None,
+                "last_sync_date": None
             }
 
-            self.save_state(new_state)
-            return new_state
-
-        return state
-
-    def save_state(self, state):
-
-        os.makedirs(
-            os.path.dirname(INDEXING_STATE_PATH),
-            exist_ok=True
-        )
-
-        with open(INDEXING_STATE_PATH, "w") as f:
-            json.dump(state, f, indent=4)
+        finally:
+            db.close()
 
     # =========================================
-    # FAISS INDEX MANAGEMENT
+    # FAISS INDEX MANAGEMENT (stays local)
     # =========================================
 
     def load_index_and_mapping(self):
@@ -123,16 +172,12 @@ class IndexingService:
             app_state.sync_job["bucket"] = bucket_name
 
             # ---------------------------------
-            # Load per-bucket state
+            # Load per-bucket state from DB
             # ---------------------------------
 
-            state = self.load_state()
-
-            bucket_state = state.get(bucket_name, {
-                "last_indexed": 0,
-                "total_files": None,
-                "last_sync_date": None
-            })
+            bucket_state = self.get_bucket_state(
+                bucket_name
+            )
 
             last_indexed = bucket_state.get(
                 "last_indexed", 0
@@ -172,9 +217,11 @@ class IndexingService:
                     "No new files to index"
                 )
 
-                bucket_state["total_files"] = total_files
-                state[bucket_name] = bucket_state
-                self.save_state(state)
+                self.save_bucket_state(
+                    bucket_name,
+                    last_indexed,
+                    total_files
+                )
 
                 app_state.sync_in_progress = False
                 return
@@ -270,19 +317,17 @@ class IndexingService:
                 )
 
             # ---------------------------------
-            # Update per-bucket state
+            # Update per-bucket state in DB
             # ---------------------------------
 
             new_last = last_indexed + len(files)
 
-            bucket_state["last_indexed"] = new_last
-            bucket_state["total_files"] = total_files
-            bucket_state["last_sync_date"] = (
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.save_bucket_state(
+                bucket_name,
+                new_last,
+                total_files,
+                datetime.now()
             )
-
-            state[bucket_name] = bucket_state
-            self.save_state(state)
 
             # ---------------------------------
             # Reload matcher with new index
@@ -330,30 +375,37 @@ class IndexingService:
     # =========================================
 
     def get_sync_logs(self):
-        """Get per-bucket sync statistics."""
+        """Get per-bucket sync statistics from DB."""
 
-        state = self.load_state()
-        logs = []
+        db = self._get_db()
 
-        for bucket_name, bucket_state in state.items():
+        try:
+            states = db.query(IndexingState).all()
+            logs = []
 
-            total_files = bucket_state.get("total_files")
-            last_indexed = bucket_state.get(
-                "last_indexed", 0
-            )
+            for s in states:
 
-            logs.append({
-                "bucket_name": bucket_name,
-                "total_synced": last_indexed,
-                "total_files": total_files,
-                "remaining": (
-                    max(0, total_files - last_indexed)
-                    if total_files is not None
-                    else None
-                ),
-                "last_sync_date": bucket_state.get(
-                    "last_sync_date"
-                )
-            })
+                total_files = s.total_files
+                last_indexed = s.last_indexed
 
-        return logs
+                logs.append({
+                    "bucket_name": s.bucket_name,
+                    "total_synced": last_indexed,
+                    "total_files": total_files,
+                    "remaining": (
+                        max(0, total_files - last_indexed)
+                        if total_files is not None
+                        else None
+                    ),
+                    "last_sync_date": (
+                        s.last_sync_date.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if s.last_sync_date else None
+                    )
+                })
+
+            return logs
+
+        finally:
+            db.close()
