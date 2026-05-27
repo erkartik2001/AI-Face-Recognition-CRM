@@ -1,14 +1,13 @@
-# Verify login
-
-import json
-import os
+# Verify login — PostgreSQL-backed
 
 import pyotp
 
 from passlib.context import CryptContext
 from datetime import datetime
 
-USERS_FILE = "backend/users.json"
+from backend.database import SessionLocal
+from backend.models import User
+
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -18,20 +17,9 @@ pwd_context = CryptContext(
 
 class AuthService:
 
-    def load_users(self):
-
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-
-    def save_users(self, users):
-
-        with open(USERS_FILE, "w") as f:
-
-            json.dump(
-                users,
-                f,
-                indent=4
-            )
+    def _get_db(self):
+        """Create a new database session."""
+        return SessionLocal()
 
     # =========================================
     # HASH PASSWORD
@@ -56,6 +44,9 @@ class AuthService:
             hashed_password
         )
 
+    # =========================================
+    # AUTHENTICATE
+    # =========================================
 
     def authenticate(
         self,
@@ -63,29 +54,33 @@ class AuthService:
         password
     ):
 
-        users = self.load_users()
+        db = self._get_db()
 
-        print(users)
+        try:
+            user = db.query(User).filter(
+                User.username == username
+            ).first()
 
-        for user in users:
+            if not user:
+                return None
 
             print("CHECKING USER")
+            print("USERNAME MATCHED")
 
-            if user["username"] == username:
+            valid = pwd_context.verify(
+                password,
+                user.password
+            )
 
-                print("USERNAME MATCHED")
+            print("PASSWORD VALID:", valid)
 
-                valid = pwd_context.verify(
-                    password,
-                    user["password"]
-                )
+            if valid:
+                return user.to_dict()
 
-                print("PASSWORD VALID:", valid)
+            return None
 
-                if valid:
-                    return user
-
-        return None
+        finally:
+            db.close()
 
     # =========================================
     # CREATE USER
@@ -98,37 +93,42 @@ class AuthService:
         role="user"
     ):
 
-        users = self.load_users()
+        db = self._get_db()
 
-        for user in users:
+        try:
+            existing = db.query(User).filter(
+                User.username == username
+            ).first()
 
-            if user["username"] == username:
+            if existing:
                 return False
 
-        hashed_password = self.hash_password(
-            password
-        )
+            hashed_password = self.hash_password(
+                password
+            )
 
-        totp_secret = pyotp.random_base32()
+            totp_secret = pyotp.random_base32()
 
-        users.append({
+            user = User(
+                username=username,
+                password=hashed_password,
+                role=role,
+                totp_secret=totp_secret,
+                created_at=datetime.now(),
+                last_login=None
+            )
 
-            "username": username,
+            db.add(user)
+            db.commit()
 
-            "password": hashed_password,
+            return totp_secret
 
-            "role": role,
+        except Exception:
+            db.rollback()
+            raise
 
-            "totp_secret": totp_secret,
-
-            "created_at" : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-
-            "last_login" : None
-        })
-
-        self.save_users(users)
-
-        return totp_secret
+        finally:
+            db.close()
 
     # =========================================
     # VERIFY OTP
@@ -140,21 +140,31 @@ class AuthService:
         otp
     ):
 
-        users = self.load_users()
+        db = self._get_db()
 
-        for user in users:
+        try:
+            user = db.query(User).filter(
+                User.username == username
+            ).first()
 
-            if user["username"] == username:
+            if not user:
+                return False
 
-                totp = pyotp.TOTP(
-                    user["totp_secret"]
-                )
+            totp = pyotp.TOTP(user.totp_secret)
 
-                user["last_login"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if totp.verify(otp):
+                user.last_login = datetime.now()
+                db.commit()
+                return True
 
-                return totp.verify(otp)
+            return False
 
-        return False
+        except Exception:
+            db.rollback()
+            raise
+
+        finally:
+            db.close()
 
     # =========================================
     # CHANGE PASSWORD
@@ -166,19 +176,25 @@ class AuthService:
         new_password
     ):
 
-        users = self.load_users()
+        db = self._get_db()
 
-        for user in users:
+        try:
+            user = db.query(User).filter(
+                User.username == username
+            ).first()
 
-            if user["username"] == username:
-
-                user["password"] = self.hash_password(
+            if user:
+                user.password = self.hash_password(
                     new_password
                 )
+                db.commit()
 
-                break
+        except Exception:
+            db.rollback()
+            raise
 
-        self.save_users(users)
+        finally:
+            db.close()
 
     # =========================================
     # DELETE USER
@@ -186,21 +202,27 @@ class AuthService:
 
     def delete_user(self, username):
 
-        users = self.load_users()
+        db = self._get_db()
 
-        original_count = len(users)
+        try:
+            user = db.query(User).filter(
+                User.username == username
+            ).first()
 
-        users = [
-            u for u in users
-            if u["username"] != username
-        ]
+            if not user:
+                return False
 
-        if len(users) == original_count:
-            return False
+            db.delete(user)
+            db.commit()
 
-        self.save_users(users)
+            return True
 
-        return True
+        except Exception:
+            db.rollback()
+            raise
+
+        finally:
+            db.close()
 
     # =========================================
     # GET USER COUNT
@@ -208,5 +230,48 @@ class AuthService:
 
     def get_user_count(self):
 
-        users = self.load_users()
-        return len(users)
+        db = self._get_db()
+
+        try:
+            return db.query(User).count()
+
+        finally:
+            db.close()
+
+    # =========================================
+    # LOAD USERS (for backwards compatibility)
+    # =========================================
+
+    def load_users(self):
+        """Return all users as list of dicts (old JSON format)."""
+
+        db = self._get_db()
+
+        try:
+            users = db.query(User).all()
+            return [u.to_dict() for u in users]
+
+        finally:
+            db.close()
+
+    # =========================================
+    # GET USER BY USERNAME
+    # =========================================
+
+    def get_user(self, username):
+        """Get a single user by username."""
+
+        db = self._get_db()
+
+        try:
+            user = db.query(User).filter(
+                User.username == username
+            ).first()
+
+            if user:
+                return user.to_dict()
+
+            return None
+
+        finally:
+            db.close()
