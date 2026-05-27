@@ -16,6 +16,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 
+# Database
+from backend.database import engine, Base
+from backend.models import User, Bucket, IndexingState
+
 load_dotenv()
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN")
@@ -25,7 +29,12 @@ frontend_origin = os.getenv("FRONTEND_ORIGIN")
 async def lifespan(app: FastAPI):
    
 
-    
+    # Create DB tables (idempotent)
+    print("Initializing Database...")
+    Base.metadata.create_all(bind=engine)
+    print("Database Ready")
+    print("-"*20)
+
     print("Loading Face Engine")
     app_state.face_engine = FaceEngine()
     print("Face Engine Loaded")
