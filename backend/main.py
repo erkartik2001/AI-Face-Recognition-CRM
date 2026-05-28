@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Database
 from backend.database import engine, Base
-from backend.models import User, Bucket, IndexingState
+from backend.models import User, Bucket, IndexingState, SchedulerLog
 
 load_dotenv()
 
