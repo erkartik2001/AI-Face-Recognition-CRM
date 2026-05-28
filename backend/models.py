@@ -89,3 +89,47 @@ class IndexingState(Base):
                 if self.last_sync_date else None
             )
         }
+
+
+class SchedulerLog(Base):
+    """Tracks automated indexing batch history."""
+    __tablename__ = "scheduler_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bucket_name = Column(
+        String(255), nullable=False, index=True
+    )
+    batch_size = Column(Integer, default=0)
+    processed = Column(Integer, default=0)
+    skipped = Column(Integer, default=0)
+    status = Column(
+        String(50), nullable=False, default="running"
+    )
+    message = Column(Text, nullable=True)
+    started_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+    completed_at = Column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "bucket_name": self.bucket_name,
+            "batch_size": self.batch_size,
+            "processed": self.processed,
+            "skipped": self.skipped,
+            "status": self.status,
+            "message": self.message,
+            "started_at": (
+                self.started_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.started_at else None
+            ),
+            "completed_at": (
+                self.completed_at.strftime("%Y-%m-%d %H:%M:%S")
+                if self.completed_at else None
+            )
+        }
+
