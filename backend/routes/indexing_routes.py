@@ -3,15 +3,10 @@ from fastapi import Depends
 from fastapi import HTTPException
 
 from pydantic import BaseModel
-from datetime import datetime
-import threading
+import httpx
 
 from backend.auth.dependencies import (
     get_current_user
-)
-
-from backend.services.indexing_service import (
-    IndexingService
 )
 
 import backend.app_state as app_state
@@ -35,6 +30,10 @@ async def start_indexing(
     request: IndexRequest,
     current_user=Depends(get_current_user)
 ):
+    """
+    Proxy indexing request to the Pipeline service.
+    Auth stays here in the CRM.
+    """
 
     # -----------------------------
     # ADMIN CHECK
@@ -46,18 +45,6 @@ async def start_indexing(
             status_code=403,
             detail="Admin only"
         )
-
-    # -----------------------------
-    # CHECK IF ALREADY RUNNING
-    # -----------------------------
-
-    if app_state.sync_in_progress:
-
-        return {
-            "success": False,
-            "message": "Sync already in progress",
-            "sync_job": app_state.sync_job
-        }
 
     # -----------------------------
     # DETERMINE BUCKET
@@ -72,46 +59,32 @@ async def start_indexing(
         bucket_name = get_active_bucket_name()
 
     # -----------------------------
-    # INIT SYNC JOB STATE
+    # CALL PIPELINE SERVICE
     # -----------------------------
 
-    app_state.sync_in_progress = True
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{app_state.pipeline_url}/start-indexing",
+                json={
+                    "count": request.count,
+                    "bucket_name": bucket_name
+                },
+                timeout=10.0
+            )
 
-    app_state.sync_job = {
-        "status": "starting",
-        "bucket": bucket_name,
-        "batch_size": request.count,
-        "processed": 0,
-        "skipped": 0,
-        "total_files": None,
-        "remaining": None,
-        "started_at": datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
-        "completed_at": None,
-        "error": None,
-        "message": None
-    }
+            return resp.json()
 
-    # -----------------------------
-    # START BACKGROUND THREAD
-    # -----------------------------
-
-    service = IndexingService()
-
-    thread = threading.Thread(
-        target=service.run_indexing,
-        args=(request.count, bucket_name),
-        daemon=True
-    )
-
-    thread.start()
-
-    return {
-        "success": True,
-        "message": "Indexing started in background",
-        "sync_job": app_state.sync_job
-    }
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Pipeline service timeout"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Pipeline service error: {e}"
+        )
 
 
 # =========================================
@@ -122,6 +95,9 @@ async def start_indexing(
 async def sync_status(
     current_user=Depends(get_current_user)
 ):
+    """
+    Proxy sync status from the Pipeline service.
+    """
 
     if current_user["role"] != "admin":
 
@@ -130,11 +106,25 @@ async def sync_status(
             detail="Admin only"
         )
 
-    return {
-        "success": True,
-        "in_progress": app_state.sync_in_progress,
-        "sync_job": app_state.sync_job
-    }
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{app_state.pipeline_url}/sync-status",
+                timeout=10.0
+            )
+
+            return resp.json()
+
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Pipeline service timeout"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Pipeline service error: {e}"
+        )
 
 
 # =========================================
@@ -145,6 +135,9 @@ async def sync_status(
 async def sync_logs(
     current_user=Depends(get_current_user)
 ):
+    """
+    Proxy sync logs from the Pipeline service.
+    """
 
     if current_user["role"] != "admin":
 
@@ -153,10 +146,22 @@ async def sync_logs(
             detail="Admin only"
         )
 
-    service = IndexingService()
-    logs = service.get_sync_logs()
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{app_state.pipeline_url}/sync-logs",
+                timeout=10.0
+            )
 
-    return {
-        "success": True,
-        "logs": logs
-    }
+            return resp.json()
+
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Pipeline service timeout"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Pipeline service error: {e}"
+        )
