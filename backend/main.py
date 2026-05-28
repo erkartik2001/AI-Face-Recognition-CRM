@@ -4,16 +4,13 @@ from backend.routes.search_routes import router as search_router
 from backend.routes.auth_routes import router as auth_router
 from backend.routes.indexing_routes import router as indexing_router
 from backend.routes.bucket_routes import router as bucket_router
-from backend.matcher import FaceMatcher
 from contextlib import asynccontextmanager
 
-from backend.app_state import matcher, face_engine, b2_storage
 import backend.app_state as app_state
 
-from backend.services.face_engine import FaceEngine
-from backend.services.storage_service import B2Storage
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import httpx
 from dotenv import load_dotenv
 
 # Database
@@ -27,7 +24,6 @@ frontend_origin = os.getenv("FRONTEND_ORIGIN")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-   
 
     # Create DB tables (idempotent)
     print("Initializing Database...")
@@ -35,29 +31,41 @@ async def lifespan(app: FastAPI):
     print("Database Ready")
     print("-"*20)
 
-    print("Loading Face Engine")
-    app_state.face_engine = FaceEngine()
-    print("Face Engine Loaded")
-    print("-"*20)
-    print("Loading B2 Storage")
-    app_state.b2_storage = B2Storage()
-    print("B2 Storage Loaded")
-    print("-"*20)
-    print("Loading Face Matcher....")
-    app_state.matcher = FaceMatcher()
-    print("Matcher loaded succesfully")
+    print(
+        f"Pipeline Service URL: "
+        f"{app_state.pipeline_url}"
+    )
 
+    # Verify pipeline service is reachable
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{app_state.pipeline_url}/health",
+                timeout=5.0
+            )
+            if resp.status_code == 200:
+                print("Pipeline Service: Connected ✓")
+            else:
+                print(
+                    "Pipeline Service: Responded with "
+                    f"status {resp.status_code}"
+                )
+    except Exception as e:
+        print(
+            f"Pipeline Service: Not reachable "
+            f"({e}). Will retry on requests."
+        )
+
+    print("-"*20)
+    print("CRM API Service Ready!")
 
     yield
 
     print("Shutting down...")
 
 
-
-
-
 app = FastAPI(
-    title= "AI Face Recognition API", lifespan=lifespan
+    title="AI Face Recognition API", lifespan=lifespan
 )
 
 app.add_middleware(
@@ -85,27 +93,49 @@ def home():
 
 
 @app.get("/health")
-def health():
+async def health():
+    """
+    Health check — also checks pipeline service health.
+    """
+    pipeline_healthy = False
+    pipeline_data = {}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{app_state.pipeline_url}/health",
+                timeout=5.0
+            )
+            if resp.status_code == 200:
+                pipeline_healthy = True
+                pipeline_data = resp.json()
+    except Exception:
+        pass
+
     return {
         "status": "healthy",
-        "face_engine": app_state.face_engine is not None,
-        "b2_storage": app_state.b2_storage is not None,
-        "matcher": app_state.matcher is not None,
-        "sync_in_progress": app_state.sync_in_progress
+        "pipeline_service": pipeline_healthy,
+        "pipeline_details": pipeline_data
     }
 
 
 @app.get("/index-stats")
-def index_stats():
-    m = app_state.matcher
-    if m is None:
-        return {"success": False, "message": "Matcher not loaded"}
-
-    return {
-        "success": True,
-        "total_vectors": m.index.ntotal if m.index else 0,
-        "total_mappings": len(m.image_mapping)
-    }
+async def index_stats():
+    """
+    Proxy to pipeline service for FAISS index stats.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{app_state.pipeline_url}/index-stats",
+                timeout=10.0
+            )
+            return resp.json()
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Pipeline service error: {e}"
+        }
 
 
 # Register routes
