@@ -12,6 +12,7 @@ python-multipart
 b2sdk
 python-dotenv
 requests
+httpx
 
 python-jose
 passlib[bcrypt]
